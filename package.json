@@ -2,7 +2,7 @@
   "name": "comprix",
   "displayName": "Comprix",
   "description": "Understand the functional outcomes of a Git comparison.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "comprix",
   "license": "MIT",
   "engines": {
@@ -72,7 +72,7 @@
         {
           "id": "comprix.outcomes",
           "name": "Comprix Outcomes",
-          "when": "workspaceFolderCount != 0"
+          "visibility": "visible"
         }
       ]
     },

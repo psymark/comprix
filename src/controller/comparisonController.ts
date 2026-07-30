@@ -225,6 +225,9 @@ export class ComparisonController implements vscode.Disposable {
           await vscode.commands.executeCommand(
             'workbench.view.scm',
           );
+          await vscode.commands.executeCommand(
+            'comprix.outcomes.focus',
+          );
         } catch (error) {
           if (!token.isCancellationRequested) {
             throw error;

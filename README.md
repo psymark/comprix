@@ -65,6 +65,11 @@ In the development host:
 5. Select a contributing file and verify that the before/after diff opens.
 6. Also try **Comprix: Analyze Commit Range** with `HEAD~1..HEAD`.
 
+After a successful analysis, Comprix opens Source Control and focuses the
+**Comprix Outcomes** section. If the section was hidden manually, reveal it from
+**Source Control > … > Views > Comprix Outcomes** or run **View: Open View** and
+choose **Comprix Outcomes**.
+
 The test suite creates a disposable, reproducible Git repository under the
 system temporary directory. It does not mutate this repository:
 
