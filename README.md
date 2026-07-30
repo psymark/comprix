@@ -47,6 +47,13 @@ Open this folder in VS Code and press `F5` using the **Run Comprix Extension**
 launch configuration. This compiles the extension and opens an Extension
 Development Host.
 
+Environment note: the WSL remote CLI available during the initial implementation
+can open the workspace but rejects the `--extensionDevelopmentPath` flag, so an
+automated shell-driven Extension Development Host launch was not possible.
+Compilation, unit/integration tests, dependency audit, and VS Code package
+inspection were completed successfully. Use `F5` for the remaining interactive
+smoke test.
+
 In the development host:
 
 1. Open a workspace backed by Git with at least two commits or refs.
