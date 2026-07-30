@@ -1,19 +1,42 @@
 import * as vscode from 'vscode';
 
+import { ComparisonController } from './controller/comparisonController';
+import { DiffService } from './view/diffService';
+import { GitContentProvider } from './view/gitContentProvider';
+import {
+  OutcomeTreeProvider,
+  type OutcomeTreeNode,
+} from './view/outcomeTree';
+
 export function activate(context: vscode.ExtensionContext): void {
-  const showScaffoldMessage = (): void => {
-    void vscode.window.showInformationMessage(
-      'Comprix is ready. Comparison analysis will be available in the next implementation increment.',
-    );
-  };
+  const treeProvider = new OutcomeTreeProvider();
+  const treeView = vscode.window.createTreeView<OutcomeTreeNode>(
+    'comprix.outcomes',
+    {
+      treeDataProvider: treeProvider,
+      showCollapseAll: true,
+    },
+  );
+  const contentProvider = new GitContentProvider();
+  const diffService = new DiffService(contentProvider);
+  const controller = new ComparisonController(
+    treeProvider,
+    treeView,
+    diffService,
+  );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('comprix.compareRefs', showScaffoldMessage),
-    vscode.commands.registerCommand('comprix.analyzeRange', showScaffoldMessage),
-    vscode.commands.registerCommand('comprix.refresh', showScaffoldMessage),
-    vscode.commands.registerCommand('comprix.clear', showScaffoldMessage),
-    vscode.commands.registerCommand('comprix.openDiff', showScaffoldMessage),
-    vscode.commands.registerCommand('comprix.openFile', showScaffoldMessage),
+    treeView,
+    vscode.workspace.registerTextDocumentContentProvider(
+      GitContentProvider.scheme,
+      contentProvider,
+    ),
+  );
+  controller.register(context);
+  void vscode.commands.executeCommand(
+    'setContext',
+    'comprix.hasResults',
+    false,
   );
 }
 

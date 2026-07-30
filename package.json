@@ -8,6 +8,18 @@
   "engines": {
     "vscode": "^1.90.0"
   },
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "virtualWorkspaces": {
+      "supported": false
+    },
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Comprix runs the local Git executable and can send the selected diff to a user-enabled VS Code language model."
+    }
+  },
   "categories": [
     "SCM Providers",
     "Other"
@@ -60,8 +72,7 @@
         {
           "id": "comprix.outcomes",
           "name": "Comprix Outcomes",
-          "when": "workspaceFolderCount != 0",
-          "icon": "$(lightbulb)"
+          "when": "workspaceFolderCount != 0"
         }
       ]
     },
