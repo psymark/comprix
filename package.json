@@ -1,0 +1,154 @@
+{
+  "name": "comprix",
+  "displayName": "Comprix",
+  "description": "Understand the functional outcomes of a Git comparison.",
+  "version": "0.1.0",
+  "publisher": "comprix",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "keywords": [
+    "git",
+    "diff",
+    "ai",
+    "change comprehension"
+  ],
+  "activationEvents": [
+    "onView:comprix.outcomes",
+    "onCommand:comprix.compareRefs",
+    "onCommand:comprix.analyzeRange"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "comprix.compareRefs",
+        "title": "Comprix: Compare Git References",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "comprix.analyzeRange",
+        "title": "Comprix: Analyze Commit Range",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "comprix.refresh",
+        "title": "Comprix: Re-analyze Comparison",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "comprix.clear",
+        "title": "Comprix: Clear Results",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "comprix.openDiff",
+        "title": "Comprix: Open Contributing Diff"
+      },
+      {
+        "command": "comprix.openFile",
+        "title": "Comprix: Open Current File"
+      }
+    ],
+    "views": {
+      "scm": [
+        {
+          "id": "comprix.outcomes",
+          "name": "Comprix Outcomes",
+          "when": "workspaceFolderCount != 0",
+          "icon": "$(lightbulb)"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "comprix.outcomes",
+        "contents": "Understand the functional outcomes of a Git change.\n[Compare Git References](command:comprix.compareRefs)\n[Analyze Commit Range](command:comprix.analyzeRange)",
+        "when": "!comprix.hasResults"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "comprix.compareRefs",
+          "when": "view == comprix.outcomes",
+          "group": "navigation@1"
+        },
+        {
+          "command": "comprix.refresh",
+          "when": "view == comprix.outcomes && comprix.hasResults",
+          "group": "navigation@2"
+        },
+        {
+          "command": "comprix.clear",
+          "when": "view == comprix.outcomes && comprix.hasResults",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "comprix.openDiff",
+          "when": "view == comprix.outcomes && viewItem == comprixFile",
+          "group": "inline@1"
+        },
+        {
+          "command": "comprix.openFile",
+          "when": "view == comprix.outcomes && viewItem == comprixFile",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Comprix",
+      "properties": {
+        "comprix.languageModel.vendor": {
+          "type": "string",
+          "default": "copilot",
+          "description": "Preferred VS Code Language Model vendor. Leave empty to use any available model."
+        },
+        "comprix.languageModel.family": {
+          "type": "string",
+          "default": "",
+          "description": "Optional preferred model family. Leave empty to allow the provider's current default."
+        },
+        "comprix.analysis.maxFiles": {
+          "type": "integer",
+          "default": 80,
+          "minimum": 1,
+          "maximum": 500,
+          "description": "Maximum number of changed files included in an analysis."
+        },
+        "comprix.analysis.maxDiffCharacters": {
+          "type": "integer",
+          "default": 60000,
+          "minimum": 4000,
+          "maximum": 500000,
+          "description": "Maximum number of patch characters sent for analysis."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "compile": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch",
+    "lint": "eslint src",
+    "test": "npm run compile && node --test dist/test/*.test.js",
+    "check": "npm run lint && npm test && npm run compile",
+    "vscode:prepublish": "npm run check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^20.14.12",
+    "@types/vscode": "1.90.0",
+    "eslint": "^10.0.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.65.0"
+  }
+}
