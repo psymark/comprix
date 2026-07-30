@@ -35,6 +35,10 @@ truth for scope.
 
 - Work in small, coherent commits. Do not bundle unrelated formatting or
   generated output with feature changes.
+- Treat the host WSL environment as safety-critical even when full access is
+  available. Keep operations scoped to this repository, avoid system-wide or
+  destructive changes, and obtain dependencies and technical guidance only
+  through trusted official channels.
 - Before each commit, inspect `git status` and `git diff --check`. Never discard
   changes you did not create.
 - Do not commit `node_modules`, packaged `.vsix` files, coverage output, or
