@@ -20,11 +20,11 @@ to each historical diff.
 - **Re-analyze Comparison** repeats the last request, while **Clear Results**
   resets the view.
 
-Comprix does not run a hosted backend, store credentials, emit telemetry, or
-send repository data anywhere itself. It reads the repository with the local
-`git` executable. Analysis uses a language-model provider already enabled in
-VS Code; that provider may process prompts remotely under its own terms and
-VS Code asks for model access consent.
+Comprix does not run a hosted backend, store credentials, or emit telemetry. It
+reads the repository with the local `git` executable. Analysis can use either a
+language-model provider registered with VS Code or an explicitly selected local
+Codex CLI. The selected provider may process prompts remotely under its own
+terms.
 
 ## Development
 
@@ -33,8 +33,8 @@ Requirements:
 - Node.js 20 or newer
 - Git
 - Visual Studio Code 1.90 or newer
-- A VS Code language-model provider, such as GitHub Copilot Chat, for end-to-end
-  analysis
+- Either a VS Code language-model provider such as GitHub Copilot Chat, or an
+  authenticated Codex CLI for end-to-end analysis
 
 Install and verify:
 
@@ -83,17 +83,41 @@ npm run watch
 
 ## Configuration
 
+- `comprix.analysis.provider` selects `vscodeLanguageModel` (the recommended
+  default) or `codexCli` (explicit opt-in).
 - `comprix.languageModel.vendor` defaults to `copilot`. Set it to an empty
   string to allow any available VS Code model provider.
 - `comprix.languageModel.family` optionally prefers a model family. If that
   family is unavailable, Comprix falls back to another model from the selected
   vendor.
+- `comprix.codex.executable` defaults to `codex`. Set an absolute path when the
+  executable is not on the extension host's `PATH`.
 - `comprix.analysis.maxFiles` limits the number of changed files sent for one
   analysis (default `80`).
 - `comprix.analysis.maxDiffCharacters` limits patch content (default `60000`).
 
 When configured limits truncate input, the model is told explicitly and the
 result view only accepts citations to included files.
+
+### Using Codex
+
+The Codex IDE extension does not currently expose a public callable extension
+API or register its account as a VS Code Language Model provider. A Codex
+subscription therefore cannot be attached to GitHub Copilot Chat.
+
+To use the authenticated Codex CLI explicitly:
+
+1. Confirm `codex --version` works in the same local or remote environment where
+   the repository is open.
+2. Set **Comprix: Analysis Provider** to **Codex CLI**.
+3. Run the comparison again.
+
+Comprix invokes `codex exec` without a shell, in an ephemeral read-only sandbox,
+ignores user Codex configuration (while retaining authentication), and supplies
+a JSON Schema for the final response. It runs from a temporary empty directory
+instead of the analyzed repository so repository instructions and tools do not
+participate. The route is explicit because it integrates with the CLI process
+rather than the VS Code Language Model API.
 
 ## Architecture
 
@@ -103,6 +127,8 @@ Language Model API. The implementation uses:
 - a local-Git adapter built on argument-safe `spawn` calls (never a shell);
 - deterministic comparison collection and bounded prompt construction;
 - a small `AnalysisProvider` interface with a VS Code Language Model provider;
+- an explicit Codex CLI provider with read-only execution and JSON-Schema
+  output;
 - strict JSON parsing and runtime schema/path validation before display;
 - a native `TreeView` in Source Control, avoiding a webview;
 - a read-only virtual-document provider plus the built-in `vscode.diff`
@@ -125,5 +151,7 @@ guidance](https://code.visualstudio.com/api/extension-guides/tree-view).
 - Results exist for the current VS Code session only and are not cached.
 - The first prototype analyzes one Git working tree at a time and does not
   include uncommitted changes.
+- The Codex CLI provider requires the CLI executable and compatible
+  non-interactive flags; it does not call into the Codex IDE panel.
 
 See [COMPRIX.md](COMPRIX.md) for the complete product brief.

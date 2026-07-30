@@ -52,7 +52,7 @@ export class VsCodeLanguageModelProvider implements AnalysisProvider {
     }
     if (models.length === 0) {
       throw new ModelUnavailableError(
-        'No compatible VS Code language model is available. Install or enable a model provider such as GitHub Copilot Chat, sign in if required, then run the comparison again.',
+        'No compatible VS Code language model is available. Install or enable a model provider such as GitHub Copilot Chat, or explicitly set Comprix: Analysis Provider to Codex CLI if an authenticated Codex CLI is available.',
       );
     }
 

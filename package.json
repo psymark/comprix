@@ -2,7 +2,7 @@
   "name": "comprix",
   "displayName": "Comprix",
   "description": "Understand the functional outcomes of a Git comparison.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "comprix",
   "license": "MIT",
   "engines": {
@@ -17,7 +17,7 @@
     },
     "untrustedWorkspaces": {
       "supported": false,
-      "description": "Comprix runs the local Git executable and can send the selected diff to a user-enabled VS Code language model."
+      "description": "Comprix runs local Git and can send the selected diff to a user-selected VS Code language model or Codex CLI."
     }
   },
   "categories": [
@@ -117,6 +117,24 @@
     "configuration": {
       "title": "Comprix",
       "properties": {
+        "comprix.analysis.provider": {
+          "type": "string",
+          "enum": [
+            "vscodeLanguageModel",
+            "codexCli"
+          ],
+          "enumDescriptions": [
+            "Use a model registered with VS Code's public Language Model API. This is the recommended extension integration.",
+            "Use Codex CLI with its existing authentication. This explicit integration runs ephemerally in a read-only sandbox."
+          ],
+          "default": "vscodeLanguageModel",
+          "description": "Analysis provider used by Comprix."
+        },
+        "comprix.codex.executable": {
+          "type": "string",
+          "default": "codex",
+          "description": "Codex CLI executable name or absolute path, used only when Comprix: Analysis Provider is Codex CLI."
+        },
         "comprix.languageModel.vendor": {
           "type": "string",
           "default": "copilot",

@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+import { CodexCliAnalysisProvider } from '../analysis/codexCliProvider';
+import type { AnalysisProvider } from '../analysis/provider';
 import { VsCodeLanguageModelProvider } from '../analysis/vsCodeLanguageModelProvider';
 import { formatComparison, parseComparisonRange } from '../core/comparison';
 import type { ComparisonSpec } from '../core/model';
@@ -25,6 +27,8 @@ interface LastComparison {
   readonly spec: ComparisonSpec;
 }
 
+type ProviderMode = 'codexCli' | 'vscodeLanguageModel';
+
 function optionalSetting(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed.length === 0 ? undefined : trimmed;
@@ -46,6 +50,7 @@ export class ComparisonController implements vscode.Disposable {
     private readonly treeProvider: OutcomeTreeProvider,
     private readonly treeView: vscode.TreeView<unknown>,
     private readonly diffService: DiffService,
+    private readonly extensionUri: vscode.Uri,
   ) {}
 
   public register(context: vscode.ExtensionContext): void {
@@ -156,13 +161,25 @@ export class ComparisonController implements vscode.Disposable {
       'analysis.maxDiffCharacters',
       60000,
     );
+    const providerMode = configuration.get<ProviderMode>(
+      'analysis.provider',
+      'vscodeLanguageModel',
+    );
+    const codexExecutable = configuration
+      .get<string>('codex.executable', 'codex')
+      .trim();
     const vendor = optionalSetting(
       configuration.get<string>('languageModel.vendor', 'copilot'),
     );
     const family = optionalSetting(
       configuration.get<string>('languageModel.family', ''),
     );
-    const provider = new VsCodeLanguageModelProvider({ vendor, family });
+    const provider = this.createAnalysisProvider(
+      providerMode,
+      codexExecutable,
+      vendor,
+      family,
+    );
 
     await vscode.window.withProgress(
       {
@@ -182,7 +199,12 @@ export class ComparisonController implements vscode.Disposable {
             return;
           }
 
-          progress.report({ message: 'Generating functional outcomes…' });
+          progress.report({
+            message:
+              providerMode === 'codexCli'
+                ? 'Generating outcomes with Codex…'
+                : 'Generating outcomes with a VS Code language model…',
+          });
           const analysis = await provider.analyze(comparison, token);
           if (token.isCancellationRequested) {
             return;
@@ -317,5 +339,26 @@ export class ComparisonController implements vscode.Disposable {
     } catch (error) {
       await this.reportError(error);
     }
+  }
+
+  private createAnalysisProvider(
+    mode: ProviderMode,
+    codexExecutable: string,
+    vendor: string | undefined,
+    family: string | undefined,
+  ): AnalysisProvider {
+    if (mode === 'codexCli') {
+      return new CodexCliAnalysisProvider({
+        executable:
+          codexExecutable.length === 0 ? 'codex' : codexExecutable,
+        schemaPath: vscode.Uri.joinPath(
+          this.extensionUri,
+          'resources',
+          'analysis-schema.json',
+        ).fsPath,
+      });
+    }
+
+    return new VsCodeLanguageModelProvider({ vendor, family });
   }
 }

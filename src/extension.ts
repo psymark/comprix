@@ -23,6 +23,7 @@ export function activate(context: vscode.ExtensionContext): void {
     treeProvider,
     treeView,
     diffService,
+    context.extensionUri,
   );
 
   context.subscriptions.push(
