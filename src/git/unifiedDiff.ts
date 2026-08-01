@@ -82,7 +82,31 @@ function decodeGitPath(value: string): string {
 }
 
 function readMarkerPath(line: string, prefix: '--- ' | '+++ '): string {
-  const raw = line.slice(prefix.length);
+  const marker = line.slice(prefix.length);
+  let raw: string;
+  if (marker.startsWith('"')) {
+    let escaped = false;
+    let closingQuote = -1;
+    for (let index = 1; index < marker.length; index += 1) {
+      const character = marker[index];
+      if (character === '"' && !escaped) {
+        closingQuote = index;
+        break;
+      }
+      escaped = character === '\\' && !escaped;
+      if (character !== '\\') escaped = false;
+    }
+    if (closingQuote < 0) {
+      throw new UnifiedDiffParseError('Git returned an unterminated quoted marker path.');
+    }
+    const suffix = marker.slice(closingQuote + 1);
+    if (suffix.length > 0 && !suffix.startsWith('\t')) {
+      throw new UnifiedDiffParseError('Git returned unexpected data after a quoted marker path.');
+    }
+    raw = marker.slice(0, closingQuote + 1);
+  } else {
+    raw = marker.split('\t', 1)[0] ?? '';
+  }
   if (raw === '/dev/null') {
     return raw;
   }
@@ -210,7 +234,9 @@ function findChangedFile(
     return expectedOld === oldPath && expectedNew === newPath;
   });
   if (matches.length !== 1 || matches[0] === undefined) {
-    throw new UnifiedDiffParseError('A patch file could not be matched uniquely to changed-file metadata.');
+    throw new UnifiedDiffParseError(
+      `Patch paths could not be matched uniquely to changed-file metadata (old: ${oldPath ?? '/dev/null'}, new: ${newPath ?? '/dev/null'}).`,
+    );
   }
   return matches[0];
 }

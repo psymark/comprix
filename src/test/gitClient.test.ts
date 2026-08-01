@@ -46,6 +46,16 @@ describe('GitClient', () => {
     assert.ok(
       comparison.files.some((file) => file.path === 'odd\tname.txt'),
     );
+    assert.ok(
+      comparison.files.some(
+        (file) => file.path === 'space name #1.txt' && file.status === 'added',
+      ),
+    );
+    assert.ok(
+      comparison.files.some(
+        (file) => file.path === 'deleted behavior.txt' && file.status === 'deleted',
+      ),
+    );
     assert.ok(comparison.evidence.length > 0);
     assert.ok(
       comparison.evidence.some((unit) =>
@@ -55,6 +65,45 @@ describe('GitClient', () => {
     assert.equal(
       comparison.evidence.length,
       comparison.totalEvidenceCount,
+    );
+    const renamedEvidence = comparison.evidence.filter(
+      (unit) => unit.path === 'src/app.txt',
+    );
+    assert.ok(renamedEvidence.length >= 2);
+    assert.ok(
+      renamedEvidence.every(
+        (unit) => unit.oldPath === 'app.txt' && unit.status === 'renamed',
+      ),
+    );
+    assert.ok(
+      comparison.evidence.some(
+        (unit) => unit.status === 'added' && unit.oldRange.length === 0,
+      ),
+    );
+    assert.ok(
+      comparison.evidence.some(
+        (unit) => unit.status === 'deleted' && unit.newRange.length === 0,
+      ),
+    );
+    assert.ok(
+      comparison.evidence.some(
+        (unit) =>
+          unit.path === 'space name #1.txt' &&
+          unit.patch.includes('No newline at end of file'),
+      ),
+    );
+
+    const repeated = await client.collectComparison(
+      {
+        baseRef: 'main',
+        headRef: 'feature',
+        strategy: 'merge-base',
+      },
+      { maxFiles: 20, maxDiffCharacters: 100_000 },
+    );
+    assert.deepEqual(
+      repeated.evidence.map((unit) => unit.id),
+      comparison.evidence.map((unit) => unit.id),
     );
   });
 
@@ -71,7 +120,7 @@ describe('GitClient', () => {
     );
 
     assert.equal(comparison.files.length, 2);
-    assert.equal(comparison.totalFileCount, 3);
+    assert.equal(comparison.totalFileCount, 5);
     assert.equal(comparison.truncated, true);
     assert.ok(comparison.evidence.length > 0);
     assert.ok(comparison.evidence.length < comparison.totalEvidenceCount);

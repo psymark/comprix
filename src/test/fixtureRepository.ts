@@ -27,22 +27,31 @@ export async function createFixtureRepository(): Promise<FixtureRepository> {
   await git(root, 'config', 'user.email', 'comprix@example.invalid');
 
   const original = Array.from(
-    { length: 20 },
+    { length: 30 },
     (_, index) => `stable line ${index.toString()}`,
   ).join('\n');
   await writeFile(path.join(root, 'app.txt'), `${original}\n`, 'utf8');
-  await git(root, 'add', 'app.txt');
+  await writeFile(
+    path.join(root, 'deleted behavior.txt'),
+    'legacy behavior\n',
+    'utf8',
+  );
+  await git(root, 'add', 'app.txt', 'deleted behavior.txt');
   await git(root, 'commit', '-m', 'add baseline behavior');
   const baseRevision = await git(root, 'rev-parse', 'HEAD');
 
   await git(root, 'switch', '-c', 'feature');
   await mkdir(path.join(root, 'src'));
   await git(root, 'mv', 'app.txt', 'src/app.txt');
+  const changedLines = original.split('\n');
+  changedLines[1] = 'feature behavior at the beginning';
+  changedLines[24] = 'feature behavior near the end';
   await writeFile(
     path.join(root, 'src', 'app.txt'),
-    `${original}\nfeature behavior\n`,
+    `${changedLines.join('\n')}\nfeature behavior\n`,
     'utf8',
   );
+  await rm(path.join(root, 'deleted behavior.txt'));
   await writeFile(
     path.join(root, 'feature.test.txt'),
     'feature behavior is covered\n',
@@ -51,6 +60,11 @@ export async function createFixtureRepository(): Promise<FixtureRepository> {
   await writeFile(
     path.join(root, 'odd\tname.txt'),
     'a safely handled unusual path\n',
+    'utf8',
+  );
+  await writeFile(
+    path.join(root, 'space name #1.txt'),
+    'a path with spaces and safe punctuation',
     'utf8',
   );
   await git(root, 'add', '--all');
