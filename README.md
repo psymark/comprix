@@ -2,8 +2,8 @@
 
 Comprix is a Visual Studio Code extension prototype that explains the functional
 outcomes of a Git comparison. Results live in a native Source Control tree:
-outcomes at the top level, contributing files underneath, and one-click access
-to each historical diff.
+outcomes at the top level, contributing files underneath, and cited diff hunks
+beneath each file.
 
 ## What it does
 
@@ -14,9 +14,13 @@ to each historical diff.
   comparison or `A...B` for a merge-base comparison.
 - The **Comprix Outcomes** view groups changed files by behavioral, API, UI,
   testing, infrastructure, documentation, or other functional outcomes.
-- Selecting a contributing file opens a read-only VS Code diff at the exact
-  analyzed revisions. The file context menu can also open the current working
-  tree copy.
+- Expanding a contributing file shows the exact hunks cited for that outcome.
+  Each citation explains its relevance and is visibly classified as a verified
+  `fact`, a model `inference`, or a reviewer `question`.
+- Selecting cited evidence opens a read-only VS Code diff at the immutable
+  analyzed revisions and reveals its new-side range (or old-side range for a
+  deletion). Selecting the file itself still opens its full historical diff,
+  and the file context menu can open the current working-tree copy.
 - **Re-analyze Comparison** repeats the last request, while **Clear Results**
   resets the view.
 
@@ -61,9 +65,13 @@ In the development host:
 3. Run **Comprix: Compare Git References** from the Command Palette or use the
    compare icon in the view title.
 4. Choose the base and head refs, approve model access if VS Code asks, and
-   expand an outcome.
-5. Select a contributing file and verify that the before/after diff opens.
-6. Also try **Comprix: Analyze Commit Range** with `HEAD~1..HEAD`.
+   expand an outcome, a contributing file, and its cited evidence.
+5. Verify that every outcome has evidence, its `fact`, `inference`, or
+   `question` label is appropriate, and the tooltip explains the citation.
+6. Select a citation and confirm that the immutable before/after diff opens at
+   the cited range. Select its parent file to confirm the full-diff command is
+   preserved.
+7. Also try **Comprix: Analyze Commit Range** with `HEAD~1..HEAD`.
 
 After a successful analysis, Comprix opens Source Control and focuses the
 **Comprix Outcomes** section. If the section was hidden manually, reveal it from
@@ -101,8 +109,9 @@ npm run watch
   analysis (default `80`).
 - `comprix.analysis.maxDiffCharacters` limits patch content (default `60000`).
 
-When configured limits truncate input, the model is told explicitly and the
-result view only accepts citations to included files.
+When configured limits truncate input, Comprix stops at a complete hunk
+boundary. The model is told explicitly, and runtime validation only accepts
+opaque evidence identifiers for the complete hunks it actually received.
 
 ### Using Codex
 
@@ -130,14 +139,43 @@ Comprix targets VS Code 1.90 because it is the first release with the finalized
 Language Model API. The implementation uses:
 
 - a local-Git adapter built on argument-safe `spawn` calls (never a shell);
-- deterministic comparison collection and bounded prompt construction;
+- deterministic unified-diff parsing into stable, addressable evidence units;
+- whole-hunk truncation and bounded prompt construction;
 - a small `AnalysisProvider` interface with a VS Code Language Model provider;
 - an explicit Codex CLI provider with read-only execution and JSON-Schema
   output;
-- strict JSON parsing and runtime schema/path validation before display;
+- strict JSON parsing and runtime evidence-ID validation before display;
 - a native `TreeView` in Source Control, avoiding a webview;
 - a read-only virtual-document provider plus the built-in `vscode.diff`
-  command for revision-to-revision navigation.
+  command for revision-to-revision navigation and range reveal.
+
+Evidence paths and old/new hunk ranges always come from Git parsing, never from
+model output. Both analysis providers use the same structured-output validator;
+an unknown, duplicate, malformed, or missing citation rejects the entire
+analysis. The VS Code provider retains one strict repair attempt.
+
+## Evidence-link manual verification
+
+The automated suite uses a disposable Git repository to cover a multi-hunk
+modified rename, added and deleted files, unusual safe path characters, a final
+line without a newline, whole-hunk truncation, structured citation validation,
+view mapping, both diff sides, and working-tree independence.
+
+For the interactive check in an Extension Development Host:
+
+1. Compare a branch that changes one file in two separated hunks. Expand each
+   file and confirm the hunk labels are distinct and useful.
+2. Select citations for a modified or added file and confirm the new-side hunk
+   is centered. Select a deleted-file citation and confirm the old side is
+   centered. Repeat with a modified rename.
+3. Edit or delete the working-tree file after analysis, then select the same
+   citation again. The diff must still show the recorded commit revisions.
+4. Set **Comprix: Analysis Max Diff Characters** low enough to omit a large
+   later hunk, re-analyze, and confirm the overview warns about truncation and
+   no result can cite the omitted hunk. The setting's minimum is 4,000
+   characters; use a hunk larger than the remaining budget if needed.
+5. Run the same comparison once with each configured provider available in your
+   development environment.
 
 The architecture follows the official [Language Model API
 guidance](https://code.visualstudio.com/api/extension-guides/ai/language-model)
@@ -149,10 +187,18 @@ guidance](https://code.visualstudio.com/api/extension-guides/tree-view).
 - VS Code's public API does not expose the built-in Git history selection, so
   the prototype uses its own native ref pickers and range input.
 - Results are model-generated and can still be incomplete or mistaken even
-  after structural validation. Confidence labels communicate model certainty,
-  not a correctness guarantee.
+  after evidence validation. `inference` and `question` labels distinguish
+  claims that the cited code does not directly establish; confidence is still
+  model-reported and not a correctness guarantee.
 - Very large comparisons are intentionally truncated. Binary diffs and
-  submodule content are not semantically expanded.
+  submodule content are not semantically expanded. A comparison with no
+  complete text hunk within the configured limit cannot be analyzed and gets
+  an actionable error.
+- VS Code's public diff command has no explicit old-side/new-side reveal
+  parameter. Comprix opens the correct immutable diff, finds the matching
+  visible historical editor, and reveals the range there. If a VS Code version
+  does not expose that editor, Comprix keeps the correct diff open and reports
+  that automatic reveal was unavailable instead of navigating elsewhere.
 - Results exist for the current VS Code session only and are not cached.
 - The first prototype analyzes one Git working tree at a time and does not
   include uncommitted changes.
