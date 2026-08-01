@@ -4,7 +4,7 @@
   "properties": {
     "version": {
       "type": "integer",
-      "const": 1
+      "const": 2
     },
     "overview": {
       "type": "string",
@@ -50,26 +50,35 @@
               "low"
             ]
           },
-          "files": {
+          "evidence": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "object",
               "properties": {
-                "path": {
+                "evidenceId": {
                   "type": "string",
                   "minLength": 1,
-                  "maxLength": 1000
+                  "maxLength": 100
                 },
-                "reason": {
+                "explanation": {
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 500
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "fact",
+                    "inference",
+                    "question"
+                  ]
                 }
               },
               "required": [
-                "path",
-                "reason"
+                "evidenceId",
+                "explanation",
+                "kind"
               ],
               "additionalProperties": false
             }
@@ -80,7 +89,7 @@
           "description",
           "category",
           "confidence",
-          "files"
+          "evidence"
         ],
         "additionalProperties": false
       }

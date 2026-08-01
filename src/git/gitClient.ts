@@ -13,6 +13,7 @@ import {
   type CancellationLike,
   type GitRunner,
 } from './gitRunner';
+import { parseUnifiedDiff, truncateEvidence } from './unifiedDiff';
 
 export interface GitRef {
   readonly name: string;
@@ -365,12 +366,19 @@ export class GitClient {
       ),
     ]);
 
-    const fullPatch = patchBuffer.toString('utf8');
-    const patchWasTruncated =
-      fullPatch.length > options.maxDiffCharacters;
-    const patch = patchWasTruncated
-      ? `${fullPatch.slice(0, options.maxDiffCharacters)}\n\n[Comprix truncated the remaining patch.]`
-      : fullPatch;
+    const allEvidence = parseUnifiedDiff(
+      patchBuffer.toString('utf8'),
+      files,
+    );
+    const evidence = truncateEvidence(
+      allEvidence,
+      options.maxDiffCharacters,
+    );
+    if (evidence.length === 0) {
+      throw new RepositoryStateError(
+        'The selected changes contain no complete text diff hunk within the configured analysis limit. Increase Comprix: Analysis Max Diff Characters and try again.',
+      );
+    }
 
     return {
       repositoryRoot: this.repositoryRoot,
@@ -381,9 +389,11 @@ export class GitClient {
       totalFileCount: changedFiles.length,
       commits: parseCommits(commitBuffer),
       shortStat: text(shortStatBuffer),
-      patch,
+      evidence,
+      totalEvidenceCount: allEvidence.length,
       truncated:
-        patchWasTruncated || changedFiles.length > options.maxFiles,
+        evidence.length < allEvidence.length ||
+        changedFiles.length > options.maxFiles,
     };
   }
 

@@ -225,7 +225,7 @@ ${buildAnalysisPrompt(comparison)}`;
 
     return parseAnalysisJson(
       response,
-      new Set(comparison.files.map((file) => file.path)),
+      new Set(comparison.evidence.map((unit) => unit.id)),
     );
   }
 }

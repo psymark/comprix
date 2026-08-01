@@ -82,12 +82,12 @@ export class VsCodeLanguageModelProvider implements AnalysisProvider {
       messages,
       cancellation,
     );
-    const allowedPaths = new Set(
-      comparison.files.map((file) => file.path),
+    const allowedEvidenceIds = new Set(
+      comparison.evidence.map((unit) => unit.id),
     );
 
     try {
-      return parseAnalysisJson(responseText, allowedPaths);
+      return parseAnalysisJson(responseText, allowedEvidenceIds);
     } catch (error) {
       if (!(error instanceof AnalysisValidationError)) {
         throw error;
@@ -107,7 +107,7 @@ export class VsCodeLanguageModelProvider implements AnalysisProvider {
         repairMessages,
         cancellation,
       );
-      return parseAnalysisJson(repaired, allowedPaths);
+      return parseAnalysisJson(repaired, allowedEvidenceIds);
     }
   }
 

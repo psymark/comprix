@@ -1,19 +1,36 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type {
-  ChangeAnalysis,
-  ComparisonSnapshot,
-} from '../core/model';
+import type { ChangeAnalysis, ComparisonSnapshot } from '../core/model';
 import { mapAnalysisToViewModel } from '../view/viewModel';
 
+const comparison = {
+  files: [{ path: 'src/change.ts', status: 'modified' }],
+  evidence: [
+    {
+      id: 'ev-one',
+      path: 'src/change.ts',
+      status: 'modified',
+      oldRange: { start: 1, length: 1 },
+      newRange: { start: 1, length: 2 },
+      heading: 'change()',
+      patch: '@@ -1 +1,2 @@ change()\n-old\n+new\n+more\n',
+    },
+    {
+      id: 'ev-two',
+      path: 'src/change.ts',
+      status: 'modified',
+      oldRange: { start: 10, length: 1 },
+      newRange: { start: 11, length: 1 },
+      patch: '@@ -10 +11 @@\n-a\n+b\n',
+    },
+  ],
+} as unknown as ComparisonSnapshot;
+
 describe('analysis view-model mapping', () => {
-  it('links each outcome citation to its changed-file metadata', () => {
-    const comparison = {
-      files: [{ path: 'src/change.ts', status: 'modified' }],
-    } as unknown as ComparisonSnapshot;
+  it('groups distinct cited hunks beneath their contributing file', () => {
     const analysis: ChangeAnalysis = {
-      version: 1,
+      version: 2,
       overview: 'Changes behavior.',
       outcomes: [
         {
@@ -21,45 +38,37 @@ describe('analysis view-model mapping', () => {
           description: 'Uses a new path.',
           category: 'behavior',
           confidence: 'high',
-          files: [
-            {
-              path: 'src/change.ts',
-              reason: 'Implements the path.',
-            },
+          evidence: [
+            { evidenceId: 'ev-one', explanation: 'Implements it.', kind: 'fact' },
+            { evidenceId: 'ev-two', explanation: 'May affect fallback.', kind: 'inference' },
           ],
         },
       ],
     };
 
     const result = mapAnalysisToViewModel(analysis, comparison);
-    assert.equal(result.outcomes[0]?.id, 'outcome-0');
-    assert.equal(
-      result.outcomes[0]?.files[0]?.change,
-      comparison.files[0],
-    );
+    assert.equal(result.outcomes[0]?.files.length, 1);
+    assert.equal(result.outcomes[0]?.files[0]?.evidence.length, 2);
+    assert.equal(result.outcomes[0]?.files[0]?.evidence[0]?.unit, comparison.evidence[0]);
+    assert.equal(result.outcomes[0]?.files[0]?.evidence[1]?.citation.kind, 'inference');
   });
 
   it('fails closed if validation and mapping become inconsistent', () => {
-    const comparison = {
-      files: [{ path: 'known.ts', status: 'added' }],
-    } as unknown as ComparisonSnapshot;
     const analysis: ChangeAnalysis = {
-      version: 1,
+      version: 2,
       overview: 'Overview.',
       outcomes: [
         {
-          title: 'Unknown path',
+          title: 'Unknown evidence',
           description: 'Invalid test input.',
           category: 'other',
           confidence: 'low',
-          files: [{ path: 'invented.ts', reason: 'Invalid.' }],
+          evidence: [
+            { evidenceId: 'ev-invented', explanation: 'Invalid.', kind: 'question' },
+          ],
         },
       ],
     };
-
-    assert.throws(
-      () => mapAnalysisToViewModel(analysis, comparison),
-      /unknown file/,
-    );
+    assert.throws(() => mapAnalysisToViewModel(analysis, comparison), /unknown evidence/);
   });
 });

@@ -8,7 +8,7 @@ import {
 } from '../analysis/schema';
 
 const validAnalysis = {
-  version: 1,
+  version: 2,
   overview: 'The change adds input validation and coverage.',
   outcomes: [
     {
@@ -16,10 +16,11 @@ const validAnalysis = {
       description: 'Validation stops unsupported input before execution.',
       category: 'behavior',
       confidence: 'high',
-      files: [
+      evidence: [
         {
-          path: 'src/validate.ts',
-          reason: 'Implements the validation branch.',
+          evidenceId: 'ev-validation',
+          explanation: 'Adds the rejection branch.',
+          kind: 'fact',
         },
       ],
     },
@@ -27,16 +28,23 @@ const validAnalysis = {
 };
 
 describe('analysis schema', () => {
-  it('accepts and normalizes a valid structured result', () => {
-    const result = validateAnalysis(
-      validAnalysis,
-      new Set(['src/validate.ts']),
-    );
-    assert.equal(result.version, 1);
-    assert.equal(result.outcomes[0]?.files[0]?.path, 'src/validate.ts');
+  it('accepts and normalizes valid evidence citations', () => {
+    const result = validateAnalysis(validAnalysis, new Set(['ev-validation']));
+    assert.equal(result.version, 2);
+    assert.equal(result.outcomes[0]?.evidence[0]?.evidenceId, 'ev-validation');
+    assert.equal(result.outcomes[0]?.evidence[0]?.kind, 'fact');
   });
 
-  it('rejects unknown paths and invalid enum values', () => {
+  it('rejects an unknown evidence identifier', () => {
+    assert.throws(
+      () => validateAnalysis(validAnalysis, new Set(['ev-other'])),
+      (error: unknown) =>
+        error instanceof AnalysisValidationError &&
+        error.issues.some((issue) => issue.includes('not a supplied evidence unit')),
+    );
+  });
+
+  it('rejects duplicated evidence within one outcome', () => {
     assert.throws(
       () =>
         validateAnalysis(
@@ -45,31 +53,60 @@ describe('analysis schema', () => {
             outcomes: [
               {
                 ...validAnalysis.outcomes[0],
-                category: 'made-up',
-                files: [
+                evidence: [
+                  validAnalysis.outcomes[0]?.evidence[0],
+                  validAnalysis.outcomes[0]?.evidence[0],
+                ],
+              },
+            ],
+          },
+          new Set(['ev-validation']),
+        ),
+      (error: unknown) =>
+        error instanceof AnalysisValidationError &&
+        error.issues.some((issue) => issue.includes('duplicate identifier')),
+    );
+  });
+
+  it('rejects missing and malformed citations', () => {
+    assert.throws(
+      () =>
+        validateAnalysis(
+          {
+            ...validAnalysis,
+            outcomes: [{ ...validAnalysis.outcomes[0], evidence: [] }],
+          },
+          new Set(['ev-validation']),
+        ),
+      AnalysisValidationError,
+    );
+    assert.throws(
+      () =>
+        validateAnalysis(
+          {
+            ...validAnalysis,
+            outcomes: [
+              {
+                ...validAnalysis.outcomes[0],
+                evidence: [
                   {
-                    path: 'src/invented.ts',
-                    reason: 'Not in the comparison.',
+                    evidenceId: 'ev-validation',
+                    explanation: '',
+                    kind: 'certainty',
                   },
                 ],
               },
             ],
           },
-          new Set(['src/validate.ts']),
+          new Set(['ev-validation']),
         ),
-      (error: unknown) =>
-        error instanceof AnalysisValidationError &&
-        error.issues.some((issue) => issue.includes('not a changed file')),
+      AnalysisValidationError,
     );
   });
 
   it('requires a bare JSON object instead of extracting prose', () => {
     assert.throws(
-      () =>
-        parseAnalysisJson(
-          `\`\`\`json\n${JSON.stringify(validAnalysis)}\n\`\`\``,
-          new Set(['src/validate.ts']),
-        ),
+      () => parseAnalysisJson(`\`\`\`json\n${JSON.stringify(validAnalysis)}\n\`\`\``, new Set(['ev-validation'])),
       AnalysisValidationError,
     );
   });

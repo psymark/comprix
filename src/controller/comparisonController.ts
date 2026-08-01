@@ -72,6 +72,11 @@ export class ComparisonController implements vscode.Disposable {
           this.executeSafely(() => this.diffService.openDiff(node)),
       ),
       vscode.commands.registerCommand(
+        'comprix.openEvidence',
+        (node: unknown) =>
+          this.executeSafely(() => this.diffService.openEvidence(node)),
+      ),
+      vscode.commands.registerCommand(
         'comprix.openFile',
         (node: unknown) =>
           this.executeSafely(() => this.diffService.openCurrentFile(node)),

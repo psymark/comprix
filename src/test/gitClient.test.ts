@@ -46,7 +46,16 @@ describe('GitClient', () => {
     assert.ok(
       comparison.files.some((file) => file.path === 'odd\tname.txt'),
     );
-    assert.match(comparison.patch, /feature behavior/);
+    assert.ok(comparison.evidence.length > 0);
+    assert.ok(
+      comparison.evidence.some((unit) =>
+        unit.patch.includes('feature behavior'),
+      ),
+    );
+    assert.equal(
+      comparison.evidence.length,
+      comparison.totalEvidenceCount,
+    );
   });
 
   it('truncates bounded analysis input and reads either revision', async () => {
@@ -58,13 +67,20 @@ describe('GitClient', () => {
         headRef: fixture.featureRevision,
         strategy: 'direct',
       },
-      { maxFiles: 2, maxDiffCharacters: 100 },
+      { maxFiles: 2, maxDiffCharacters: 60 },
     );
 
     assert.equal(comparison.files.length, 2);
     assert.equal(comparison.totalFileCount, 3);
     assert.equal(comparison.truncated, true);
-    assert.match(comparison.patch, /Comprix truncated/);
+    assert.ok(comparison.evidence.length > 0);
+    assert.ok(comparison.evidence.length < comparison.totalEvidenceCount);
+    assert.ok(
+      comparison.evidence.reduce(
+        (total, unit) => total + unit.patch.length,
+        0,
+      ) <= 60,
+    );
 
     const before = await client.readFileAtRevision(
       fixture.baseRevision,

@@ -31,7 +31,19 @@ const snapshot: ComparisonSnapshot = {
     },
   ],
   shortStat: '1 file changed, 2 insertions(+)',
-  patch: 'diff --git a/src/old.ts b/src/new.ts',
+  evidence: [
+    {
+      id: 'ev-123',
+      path: 'src/new.ts',
+      oldPath: 'src/old.ts',
+      status: 'renamed',
+      oldRange: { start: 2, length: 1 },
+      newRange: { start: 2, length: 2 },
+      heading: 'renameFeature()',
+      patch: '@@ -2 +2,2 @@ renameFeature()\n-old\n+new\n+added\n',
+    },
+  ],
+  totalEvidenceCount: 3,
   truncated: true,
 };
 
@@ -42,6 +54,11 @@ describe('analysis prompt', () => {
     assert.match(prompt, /\[renamed\] src\/new\.ts \(from src\/old\.ts\)/);
     assert.match(prompt, /2222222 change behavior — Test Author/);
     assert.match(prompt, /Input was truncated/);
-    assert.match(prompt, /diff --git a\/src\/old\.ts b\/src\/new\.ts/);
+    assert.match(prompt, /Evidence units supplied: 1 of 3/);
+    assert.match(prompt, /EVIDENCE ev-123/);
+    assert.match(prompt, /Previous path: src\/old\.ts/);
+    assert.match(prompt, /Old range: 2,1/);
+    assert.match(prompt, /New range: 2,2/);
+    assert.match(prompt, /@@ -2 \+2,2 @@ renameFeature/);
   });
 });

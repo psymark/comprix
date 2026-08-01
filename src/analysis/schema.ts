@@ -1,11 +1,13 @@
 import {
   confidenceLevels,
+  evidenceClaimKinds,
   outcomeCategories,
   type ChangeAnalysis,
   type ChangeOutcome,
   type Confidence,
+  type EvidenceCitation,
+  type EvidenceClaimKind,
   type OutcomeCategory,
-  type OutcomeFile,
 } from '../core/model';
 
 export class AnalysisValidationError extends Error {
@@ -31,9 +33,7 @@ function readString(
   }
   const result = value.trim();
   if (result.length > maximumLength) {
-    issues.push(
-      `${path} must not exceed ${maximumLength.toString()} characters`,
-    );
+    issues.push(`${path} must not exceed ${maximumLength.toString()} characters`);
     return undefined;
   }
   return result;
@@ -52,40 +52,53 @@ function readEnum<T extends string>(
   return value as T;
 }
 
-function readOutcomeFile(
+function readEvidenceCitation(
   value: unknown,
-  index: number,
-  allowedPaths: ReadonlySet<string>,
+  outcomeIndex: number,
+  citationIndex: number,
+  allowedEvidenceIds: ReadonlySet<string>,
   issues: string[],
-): OutcomeFile | undefined {
-  const itemPath = `outcomes[].files[${index.toString()}]`;
+): EvidenceCitation | undefined {
+  const itemPath = `outcomes[${outcomeIndex.toString()}].evidence[${citationIndex.toString()}]`;
   if (!isRecord(value)) {
     issues.push(`${itemPath} must be an object`);
     return undefined;
   }
 
-  const filePath = readString(value.path, `${itemPath}.path`, issues, 1000);
-  const reason = readString(
-    value.reason,
-    `${itemPath}.reason`,
+  const evidenceId = readString(
+    value.evidenceId,
+    `${itemPath}.evidenceId`,
+    issues,
+    100,
+  );
+  const explanation = readString(
+    value.explanation,
+    `${itemPath}.explanation`,
     issues,
     500,
   );
-  if (filePath !== undefined && !allowedPaths.has(filePath)) {
-    issues.push(`${itemPath}.path is not a changed file: ${filePath}`);
+  const kind = readEnum<EvidenceClaimKind>(
+    value.kind,
+    evidenceClaimKinds,
+    `${itemPath}.kind`,
+    issues,
+  );
+  if (evidenceId !== undefined && !allowedEvidenceIds.has(evidenceId)) {
+    issues.push(`${itemPath}.evidenceId is not a supplied evidence unit: ${evidenceId}`);
   }
 
-  return filePath !== undefined &&
-    reason !== undefined &&
-    allowedPaths.has(filePath)
-    ? { path: filePath, reason }
+  return evidenceId !== undefined &&
+    explanation !== undefined &&
+    kind !== undefined &&
+    allowedEvidenceIds.has(evidenceId)
+    ? { evidenceId, explanation, kind }
     : undefined;
 }
 
 function readOutcome(
   value: unknown,
   index: number,
-  allowedPaths: ReadonlySet<string>,
+  allowedEvidenceIds: ReadonlySet<string>,
   issues: string[],
 ): ChangeOutcome | undefined {
   const itemPath = `outcomes[${index.toString()}]`;
@@ -95,88 +108,74 @@ function readOutcome(
   }
 
   const title = readString(value.title, `${itemPath}.title`, issues, 160);
-  const description = readString(
-    value.description,
-    `${itemPath}.description`,
-    issues,
-    1200,
-  );
-  const category = readEnum<OutcomeCategory>(
-    value.category,
-    outcomeCategories,
-    `${itemPath}.category`,
-    issues,
-  );
-  const confidence = readEnum<Confidence>(
-    value.confidence,
-    confidenceLevels,
-    `${itemPath}.confidence`,
-    issues,
-  );
+  const description = readString(value.description, `${itemPath}.description`, issues, 1200);
+  const category = readEnum<OutcomeCategory>(value.category, outcomeCategories, `${itemPath}.category`, issues);
+  const confidence = readEnum<Confidence>(value.confidence, confidenceLevels, `${itemPath}.confidence`, issues);
 
-  if (!Array.isArray(value.files) || value.files.length === 0) {
-    issues.push(`${itemPath}.files must be a non-empty array`);
+  if (!Array.isArray(value.evidence) || value.evidence.length === 0) {
+    issues.push(`${itemPath}.evidence must be a non-empty array`);
     return undefined;
   }
 
-  const files = value.files
-    .map((file, fileIndex) =>
-      readOutcomeFile(file, fileIndex, allowedPaths, issues),
+  const evidence = value.evidence
+    .map((citation, citationIndex) =>
+      readEvidenceCitation(
+        citation,
+        index,
+        citationIndex,
+        allowedEvidenceIds,
+        issues,
+      ),
     )
-    .filter((file): file is OutcomeFile => file !== undefined);
+    .filter((citation): citation is EvidenceCitation => citation !== undefined);
+  const seen = new Set<string>();
+  for (const citation of evidence) {
+    if (seen.has(citation.evidenceId)) {
+      issues.push(`${itemPath}.evidence contains duplicate identifier ${citation.evidenceId}`);
+    }
+    seen.add(citation.evidenceId);
+  }
 
   return title !== undefined &&
     description !== undefined &&
     category !== undefined &&
     confidence !== undefined &&
-    files.length === value.files.length
-    ? { title, description, category, confidence, files }
+    evidence.length === value.evidence.length
+    ? { title, description, category, confidence, evidence }
     : undefined;
 }
 
 export function validateAnalysis(
   value: unknown,
-  allowedPaths: ReadonlySet<string>,
+  allowedEvidenceIds: ReadonlySet<string>,
 ): ChangeAnalysis {
   const issues: string[] = [];
   if (!isRecord(value)) {
     throw new AnalysisValidationError(['root must be an object']);
   }
 
-  if (value.version !== 1) {
-    issues.push('version must be 1');
+  if (value.version !== 2) {
+    issues.push('version must be 2');
   }
   const overview = readString(value.overview, 'overview', issues, 2000);
-
-  if (
-    !Array.isArray(value.outcomes) ||
-    value.outcomes.length === 0 ||
-    value.outcomes.length > 20
-  ) {
+  if (!Array.isArray(value.outcomes) || value.outcomes.length === 0 || value.outcomes.length > 20) {
     issues.push('outcomes must contain between 1 and 20 items');
   }
 
   const rawOutcomes = Array.isArray(value.outcomes) ? value.outcomes : [];
   const outcomes = rawOutcomes
-    .map((outcome, index) =>
-      readOutcome(outcome, index, allowedPaths, issues),
-    )
+    .map((outcome, index) => readOutcome(outcome, index, allowedEvidenceIds, issues))
     .filter((outcome): outcome is ChangeOutcome => outcome !== undefined);
 
-  if (
-    issues.length > 0 ||
-    overview === undefined ||
-    outcomes.length !== rawOutcomes.length
-  ) {
+  if (issues.length > 0 || overview === undefined || outcomes.length !== rawOutcomes.length) {
     throw new AnalysisValidationError(issues);
   }
-
-  return { version: 1, overview, outcomes };
+  return { version: 2, overview, outcomes };
 }
 
 export function parseAnalysisJson(
   response: string,
-  allowedPaths: ReadonlySet<string>,
+  allowedEvidenceIds: ReadonlySet<string>,
 ): ChangeAnalysis {
   let value: unknown;
   try {
@@ -186,5 +185,5 @@ export function parseAnalysisJson(
       'model response must be a single JSON object with no prose or code fence',
     ]);
   }
-  return validateAnalysis(value, allowedPaths);
+  return validateAnalysis(value, allowedEvidenceIds);
 }

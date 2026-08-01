@@ -21,7 +21,17 @@ const comparison: ComparisonSnapshot = {
   totalFileCount: 1,
   commits: [],
   shortStat: '1 file changed',
-  patch: 'diff --git a/src/change.ts b/src/change.ts',
+  evidence: [
+    {
+      id: 'ev-change',
+      path: 'src/change.ts',
+      status: 'modified',
+      oldRange: { start: 1, length: 1 },
+      newRange: { start: 1, length: 1 },
+      patch: '@@ -1 +1 @@\n-old\n+new\n',
+    },
+  ],
+  totalEvidenceCount: 1,
   truncated: false,
 };
 
@@ -58,7 +68,7 @@ describe('Codex CLI provider', () => {
         request = value;
         return Promise.resolve(
           JSON.stringify({
-            version: 1,
+            version: 2,
             overview: 'Updates behavior.',
             outcomes: [
               {
@@ -66,10 +76,11 @@ describe('Codex CLI provider', () => {
                 description: 'Changes the existing behavior.',
                 category: 'behavior',
                 confidence: 'high',
-                files: [
+                evidence: [
                   {
-                    path: 'src/change.ts',
-                    reason: 'Implements the behavior.',
+                    evidenceId: 'ev-change',
+                    explanation: 'Implements the behavior.',
+                    kind: 'fact',
                   },
                 ],
               },
@@ -90,5 +101,6 @@ describe('Codex CLI provider', () => {
       request?.input ?? '',
       /Do not run commands or inspect files/,
     );
+    assert.match(request?.input ?? '', /EVIDENCE ev-change/);
   });
 });

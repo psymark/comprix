@@ -63,6 +63,10 @@
         "title": "Comprix: Open Contributing Diff"
       },
       {
+        "command": "comprix.openEvidence",
+        "title": "Comprix: Open Cited Evidence"
+      },
+      {
         "command": "comprix.openFile",
         "title": "Comprix: Open Current File"
       }
@@ -111,6 +115,11 @@
           "command": "comprix.openFile",
           "when": "view == comprix.outcomes && viewItem == comprixFile",
           "group": "navigation@2"
+        },
+        {
+          "command": "comprix.openEvidence",
+          "when": "view == comprix.outcomes && viewItem == comprixEvidence",
+          "group": "inline@1"
         }
       ]
     },

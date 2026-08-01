@@ -29,6 +29,22 @@ export interface CommitSummary {
   readonly authoredAt: string;
 }
 
+export interface EvidenceRange {
+  readonly start: number;
+  readonly length: number;
+}
+
+export interface EvidenceUnit {
+  readonly id: string;
+  readonly path: string;
+  readonly oldPath?: string;
+  readonly status: ChangedFileStatus;
+  readonly oldRange: EvidenceRange;
+  readonly newRange: EvidenceRange;
+  readonly heading?: string;
+  readonly patch: string;
+}
+
 export interface ComparisonSnapshot {
   readonly repositoryRoot: string;
   readonly spec: ComparisonSpec;
@@ -38,7 +54,8 @@ export interface ComparisonSnapshot {
   readonly totalFileCount: number;
   readonly commits: readonly CommitSummary[];
   readonly shortStat: string;
-  readonly patch: string;
+  readonly evidence: readonly EvidenceUnit[];
+  readonly totalEvidenceCount: number;
   readonly truncated: boolean;
 }
 
@@ -60,9 +77,14 @@ export const confidenceLevels = ['high', 'medium', 'low'] as const;
 
 export type Confidence = (typeof confidenceLevels)[number];
 
-export interface OutcomeFile {
-  readonly path: string;
-  readonly reason: string;
+export const evidenceClaimKinds = ['fact', 'inference', 'question'] as const;
+
+export type EvidenceClaimKind = (typeof evidenceClaimKinds)[number];
+
+export interface EvidenceCitation {
+  readonly evidenceId: string;
+  readonly explanation: string;
+  readonly kind: EvidenceClaimKind;
 }
 
 export interface ChangeOutcome {
@@ -70,11 +92,11 @@ export interface ChangeOutcome {
   readonly description: string;
   readonly category: OutcomeCategory;
   readonly confidence: Confidence;
-  readonly files: readonly OutcomeFile[];
+  readonly evidence: readonly EvidenceCitation[];
 }
 
 export interface ChangeAnalysis {
-  readonly version: 1;
+  readonly version: 2;
   readonly overview: string;
   readonly outcomes: readonly ChangeOutcome[];
 }
