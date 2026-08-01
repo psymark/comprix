@@ -71,4 +71,27 @@ describe('analysis view-model mapping', () => {
     };
     assert.throws(() => mapAnalysisToViewModel(analysis, comparison), /unknown evidence/);
   });
+
+  it('states deterministically when analysis input was incomplete', () => {
+    const analysis: ChangeAnalysis = {
+      version: 2,
+      overview: 'Changes behavior.',
+      outcomes: [
+        {
+          title: 'Changes behavior',
+          description: 'Uses cited code.',
+          category: 'behavior',
+          confidence: 'high',
+          evidence: [
+            { evidenceId: 'ev-one', explanation: 'Changes it.', kind: 'fact' },
+          ],
+        },
+      ],
+    };
+    const result = mapAnalysisToViewModel(analysis, {
+      ...comparison,
+      truncated: true,
+    });
+    assert.match(result.overview, /Analysis input was incomplete/u);
+  });
 });

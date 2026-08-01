@@ -43,7 +43,9 @@ export function mapAnalysisToViewModel(
   const evidenceById = new Map(comparison.evidence.map((unit) => [unit.id, unit]));
 
   return {
-    overview: analysis.overview,
+    overview: comparison.truncated
+      ? `${analysis.overview}\n\nAnalysis input was incomplete; configured limits omitted some files or diff hunks.`
+      : analysis.overview,
     outcomes: analysis.outcomes.map((outcome, outcomeIndex) => {
       const files = new Map<string, OutcomeFileViewModel>();
       for (const citation of outcome.evidence) {

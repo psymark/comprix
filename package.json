@@ -166,7 +166,7 @@
           "default": 60000,
           "minimum": 4000,
           "maximum": 500000,
-          "description": "Maximum number of patch characters sent for analysis."
+          "description": "Maximum number of complete diff-hunk characters sent for analysis. Comprix never supplies a partial hunk."
         }
       }
     }

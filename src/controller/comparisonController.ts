@@ -215,13 +215,11 @@ export class ComparisonController implements vscode.Disposable {
             return;
           }
 
-          this.treeProvider.setResults(
-            mapAnalysisToViewModel(analysis, comparison),
-            comparison,
-          );
+          const viewModel = mapAnalysisToViewModel(analysis, comparison);
+          this.treeProvider.setResults(viewModel, comparison);
           this.lastComparison = { client, spec };
           this.treeView.description = formatComparison(spec);
-          this.treeView.message = analysis.overview;
+          this.treeView.message = viewModel.overview;
           await vscode.commands.executeCommand(
             'setContext',
             'comprix.hasResults',

@@ -41,6 +41,12 @@ function rangeLabel(evidence: EvidenceCitationViewModel): string {
   return `${side} lines ${range.start.toString()}–${(range.start + range.length - 1).toString()}`;
 }
 
+function evidenceLabel(evidence: EvidenceCitationViewModel): string {
+  const heading = evidence.unit.heading;
+  if (heading === undefined) return rangeLabel(evidence);
+  return heading.length <= 96 ? heading : `${heading.slice(0, 95)}…`;
+}
+
 export class OutcomeNode extends vscode.TreeItem {
   public readonly kind = 'outcome';
 
@@ -99,7 +105,7 @@ export class EvidenceNode extends vscode.TreeItem {
     public readonly comparison: ComparisonSnapshot,
   ) {
     super(
-      evidence.unit.heading ?? rangeLabel(evidence),
+      evidenceLabel(evidence),
       vscode.TreeItemCollapsibleState.None,
     );
     this.id = evidence.id;
